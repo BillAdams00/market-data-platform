@@ -1,0 +1,16 @@
+# Fichiers générés par Python
+__pycache__/
+*.pyc
+
+# Environnement virtuel
+.venv/
+venv/
+
+# Secrets - ne jamais versionner
+.env
+
+# Réglages locaux de l'éditeur
+.vscode/
+
+# Données générées par le programme
+portefeuille.json
