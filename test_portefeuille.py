@@ -1,6 +1,6 @@
 import pytest
 
-from instrument import Instrument, Position, PorteFeuille
+from marketdata import Instrument, Position, PorteFeuille
 
 
 def test_montant_investi_total():
@@ -39,7 +39,7 @@ def test_supprimer_symbole_absent():
     with pytest.raises(ValueError,match="AAPL"):
         portefeuille.supprimer("AAPL")
 
-def test_valeur_total_sans_cours():
+def test_valeur_totale_sans_cours():
     nvidia = Instrument("nvda", "Nvidia", "Technologie")
     microsoft = Instrument("msft", "Microsoft", "Technologie")
     dic_cours = {"NVDA":120}

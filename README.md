@@ -1,8 +1,8 @@
- Market Data Platform
+# Market Data Platform
 
 Plateforme de données de marché — modélisation, ingestion, entrepôt et qualité.
 
-## 1- Le problème
+## 1. Le problème
 
 Dans une société de gestion, le gérant, l'analyste risque et le reporting
 client travaillent sur les mêmes titres. Mais chacun télécharge ses données
@@ -16,7 +16,7 @@ et le même titre porte trois identifiants différents selon la source.
 Les réunions se passent alors à réconcilier des chiffres au lieu de décider.
 Ce projet construit la source unique qui tranche la question.
 
-## 2- État actuel
+## 2. État actuel
 
 La modélisation du domaine est terminée, parce que les règles métier doivent
 vivre dans le modèle et non dispersées dans des scripts.
@@ -28,8 +28,10 @@ vivre dans le modèle et non dispersées dans des scripts.
 - **Valorisation** : montant investi, valeur de marché et plus-value latente,
   au niveau de la ligne comme du portefeuille
 - **Persistance JSON** : sauvegarde et rechargement complet de l'état
+- **Tests automatisés** : cinq tests pytest couvrant les calculs et les refus
+- **Découpage en paquet** : une classe par module, dépendances à sens unique
 
-## 3-- Architecture
+## 3. Architecture
 
 | Couche | Contenu | État |
 |---|---|---|
@@ -40,18 +42,46 @@ vivre dans le modèle et non dispersées dans des scripts.
 | 04 | Orchestration Airflow | à venir |
 | 05 | Restitution BI | à venir |
 
-# 4-- Modèle de données
+## 4. Structure du dépôt
+
+```
+market_data_platform/
+├── marketdata/
+│   ├── __init__.py          façade du paquet : expose les trois classes
+│   ├── instrument.py        class Instrument
+│   ├── position.py          class Position
+│   └── portefeuille.py      class PorteFeuille
+├── test_portefeuille.py     suite pytest
+├── demo.py                  scénario de démonstration
+├── essai_chargement.py      preuve de la persistance
+└── requirements.txt
+```
+
+Les dépendances entre modules vont dans un seul sens :
+
+```
+Instrument  ◄──  Position  ◄──  Portefeuille
+```
+
+Ce n'est pas une contrainte technique mais la traduction du métier :
+un titre existe indépendamment de toute détention, une position n'a de sens
+que rapportée à un titre. Un import en sens inverse signalerait une erreur
+de modélisation.
+
+## 5. Modèle de données
+
+```
 Portefeuille
 ├─ nom
 └─ positions ──► Position
-├─ quantité
-├─ prix de revient
-└─ instrument ──► Instrument
-├─ symbole
-├─ nom
-├─ secteur
-└─ devise
-
+                 ├─ quantité
+                 ├─ prix de revient
+                 └─ instrument ──► Instrument
+                                   ├─ symbole
+                                   ├─ nom
+                                   ├─ secteur
+                                   └─ devise
+```
 
 `Instrument` décrit ce qu'est un titre, indépendamment de toute détention.
 `Position` décrit la relation d'un investisseur à ce titre. `Portefeuille`
@@ -60,34 +90,55 @@ agrège sans recalculer.
 Cette séparation prépare le schéma en étoile de la couche 03 : `Instrument`
 deviendra une dimension, `Position` une table de faits.
 
-## Installation et exécution
+## 6. Installation et exécution
 
-Prérequis : Python 3.12 ou supérieur. Aucune dépendance externe.
+Prérequis : Python 3.12 ou supérieur.
 
 ```bash
 git clone https://github.com/BillAdams00/market-data-platform.git
 cd market-data-platform
-python instrument.py
+
+python -m venv .venv
+.venv\Scripts\Activate.ps1        # Windows PowerShell
+source .venv/bin/activate         # Linux / macOS
+
+pip install -r requirements.txt
 ```
 
-Pour vérifier la persistance — le portefeuille est reconstruit depuis le
-fichier, sans aucune donnée dans le programme :
+Le code métier ne dépend d'aucune bibliothèque externe ; `requirements.txt`
+ne contient que les outils de développement, pytest en tête.
+
+Lancer la démonstration :
+
+```bash
+python demo.py
+```
+
+Vérifier la persistance — le portefeuille est reconstruit depuis le fichier,
+sans aucune donnée écrite dans le programme :
 
 ```bash
 python essai_chargement.py
 ```
 
-# 5-- Exemple de sortie
+Lancer les tests :
 
+```bash
+pytest -v
+```
+
+## 7. Exemple de sortie
+
+```
 Portefeuille PEA Adams (2 positions)
-Position(NVDA, 20 × 165.04)
+Position(NVDA, 20 × 165.04000000000002)
 4374.55
 4415.5
 Refusé : AAPL n'est pas détenu dans ce portefeuille
 Refusé : Aucun cours fourni pour MSFT
+```
 
-
-# 6-- Décisions techniques
+## 8. Décisions techniques
 
 **Le prix de revient est pondéré, pas moyenné.** Un achat complémentaire de
 8 titres à 175,00 sur une ligne de 12 titres à 158,40 donne un PRU de 165,04,
@@ -113,16 +164,22 @@ mettre à jour chaque position à chaque variation.
 chargement de plusieurs milliers de lignes, un message générique oblige à
 rouvrir le code ; un message précis permet de corriger la source.
 
-# 7-- Feuille de route
+**Les montants sont provisoirement des flottants.** Le PRU affiché
+`165.04000000000002` le montre : la base 2 ne représente pas exactement les
+décimales. Acceptable pour une démonstration, inacceptable pour un calcul de
+performance qui doit se réconcilier au centime. La couche 01 introduira
+`Decimal` côté Python et `NUMERIC` côté PostgreSQL.
 
-- Tests automatisés avec pytest
-- Découpage en modules et environnement virtuel
+## 9. Feuille de route
+
 - Ingestion depuis Alpha Vantage, l'API de la BCE et FRED, avec chargement
-  idempotent
+  idempotent et journal d'exécution
+- Indicateurs financiers : rendements, volatilité annualisée, maximum drawdown
 - Schéma en étoile sur PostgreSQL et contrôles qualité automatisés
 - Orchestration quotidienne avec Airflow
+- Restitution décisionnelle
 
-# 8--Auteur
+## 10. Auteur
 
 Bill Adams — cycle ingénieur Data-IA, en recherche d'un stage de data engineer
 en finance.
