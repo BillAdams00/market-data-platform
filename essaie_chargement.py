@@ -1,4 +1,4 @@
-from instrument import PorteFeuille
+from marketdata import PorteFeuille
 
 portefeuille = PorteFeuille.charger("portefeuille.json")
 print(portefeuille)
