@@ -1,6 +1,6 @@
 from datetime import date
 
-from marketdata.ingestion import frankfurter
+from marketdata.ingestion import alphavantage, frankfurter
 
-nombre = frankfurter.executer(date(2026, 10, 1), date(2026, 10, 31))
-print(f"{nombre} observations traitées")
+print(frankfurter.executer(date(2026, 10, 1), date(2026, 10, 31)), "taux de change")
+print(alphavantage.executer("NVDA"), "cours")
